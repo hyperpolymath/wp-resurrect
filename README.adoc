@@ -1,217 +1,263 @@
-= RSR Template Repository
+// SPDX-License-Identifier: AGPL-3.0-or-later
+= WP-Resurrect: Site Operations Control Plane (SOCP)
 :toc:
 :sectnums:
+:icons: font
 
-// Badges
 image:https://img.shields.io/badge/RSR-Infrastructure-cd7f32[RSR Infrastructure]
-image:https://img.shields.io/badge/Phase-Maintenance-brightgreen[Phase]
-image:https://img.shields.io/badge/License-AGPL%20OR%20Palimpsest-blue[License]
+image:https://img.shields.io/badge/Phase-Development-yellow[Phase]
+image:https://img.shields.io/badge/License-AGPL--3.0-blue[License]
 image:https://img.shields.io/badge/Guix-Primary-purple?logo=gnu[Guix]
 
 == Overview
 
-**The canonical template for RSR (Rhodium Standard Repository) projects.**
+**WP-Resurrect** is a centralized **Site Operations Control Plane** (SOCP) for managing multiple web properties through a single, security-hardened command center.
 
-This repository provides the standardized structure, configuration, and tooling for all 139 repos in the hyperpolymath ecosystem. Use it to:
+=== The Problem
 
-* Bootstrap new projects with RSR compliance
-* Reference the standard directory structure
-* Copy configuration templates (justfile, STATE.scm, etc.)
+Managing multiple WordPress sites (or any web properties) involves repetitive configuration of:
+
+* Hidden primary DNS setup with DNSSEC
+* Security headers (CSP, HSTS, X-Frame-Options, etc.)
+* PHP settings, pool configuration, OPcache tuning
+* Web server configs (nginx/Apache/LiteSpeed)
+* OWASP ModSecurity rules
+* Fail2ban/CrowdSec rules
+* WordPress hardening (wp-config.php, XML-RPC blocking)
+* Database tuning and backup scheduling
+* Redis/Memcached object caching
+* SSL certificate management
+* Google API integrations (Maps, reCAPTCHA)
+* Rate limiting and bot protection
+* ...and doing it consistently across all sites
+
+=== The Solution
+
+SOCP provides:
+
+* **Configuration as Code**: All site settings in type-checked Nickel configs
+* **Centralized Management**: Push changes to all sites, groups, or individuals
+* **Hidden Control Plane**: Behind SDP (OpenZiti), IPv6-only access
+* **ncurses Dashboard**: Real-time status across all sites
+* **Idempotent Deployments**: SaltStack ensures consistent state
+* **Secret Management**: Encrypted pillars, rotation scheduling
+* **Audit Trail**: Every change tracked in Guile state files
+
+== Architecture
+
+[source]
+----
+┌─────────────────────────────────────────────────────────────────┐
+│  OPERATOR ──────────────────────────────────────────────────────│
+│  │                                                              │
+│  │ socp-tui (Rust/ratatui ncurses dashboard)                   │
+│  │ • Site status     • Config diffs     • Deployments          │
+│  ▼                                                              │
+├─────────────────────────────────────────────────────────────────┤
+│  ORCHESTRATION ─────────────────────────────────────────────────│
+│  │                                                              │
+│  │ socp-api (Gleam) + Config Compiler (Nickel → Salt)          │
+│  │ • REST/gRPC API   • Validation      • State (Guile)         │
+│  ▼                                                              │
+├─────────────────────────────────────────────────────────────────┤
+│  INFRASTRUCTURE ────────────────────────────────────────────────│
+│  │                                                              │
+│  │ SaltStack Master                                             │
+│  │ • salt-master: Central command    • salt-api: REST          │
+│  │ • Encrypted pillars (secrets)     • Idempotent states       │
+│  ▼                                                              │
+├─────────────────────────────────────────────────────────────────┤
+│  SECURITY PERIMETER ────────────────────────────────────────────│
+│  │                                                              │
+│  │ OpenZiti SDP  +  IPv6-only  +  mTLS                         │
+│  │ • Zero trust     • No IPv4        • Client certs            │
+│  ▼                                                              │
+├─────────────────────────────────────────────────────────────────┤
+│  MANAGED SITES ─────────────────────────────────────────────────│
+│                                                                 │
+│  [Site A]    [Site B]    [Site C]    [Site D]    [Site N]      │
+│   WP+PHP      WP+PHP      Static      Custom       ...         │
+│   nginx       Apache      nginx       LiteSpeed                 │
+└─────────────────────────────────────────────────────────────────┘
+----
 
 == Quick Start
 
 [source,bash]
 ----
-# Clone the template
-git clone https://github.com/hyperpolymath/RSR-template-repo my-project
-cd my-project
-
-# Remove template git history
-rm -rf .git
-git init
-
-# Customize
-sed -i 's/RSR-template-repo/my-project/g' justfile guix.scm README.adoc
-
 # Enter development environment
 guix shell -D -f guix.scm
 
-# Validate compliance
-just validate-rsr
-----
+# Build the TUI
+cd src/socp-tui && cargo build --release
 
-== What's Included
+# Run the dashboard
+./target/release/socp-tui --api-url https://[::1]:8443
 
-[cols="1,3"]
-|===
-|File/Directory |Purpose
-
-|`.editorconfig`
-|Editor configuration (indent, charset)
-
-|`.gitignore`
-|Standard ignore patterns
-
-|`.guix-channel`
-|Guix channel definition
-
-|`.well-known/`
-|RFC-compliant metadata (security.txt, ai.txt, humans.txt)
-
-|`docs/`
-|Documentation directory
-
-|`guix.scm`
-|Guix package definition
-
-|`justfile`
-|Task runner with 50+ recipes
-
-|`LICENSE.txt`
-|AGPL + Palimpsest dual license
-
-|`README.adoc`
-|This file
-
-|`RSR_COMPLIANCE.adoc`
-|Compliance tracking
-
-|`STATE.scm`
-|Project state checkpoint
-|===
-
-== Justfile Features
-
-The template justfile provides:
-
-* **~10 billion recipe combinations** via matrix recipes
-* **Cookbook generation**: `just cookbook` → `docs/just-cookbook.adoc`
-* **Man page generation**: `just man` → `docs/man/project.1`
-* **RSR validation**: `just validate-rsr`
-* **STATE.scm management**: `just state-touch`, `just state-phase`
-* **Container support**: `just container-build`, `just container-push`
-* **CI matrix**: `just ci-matrix [stage] [depth]`
-
-=== Key Recipes
-
-[source,bash]
-----
-just                # Show all recipes
-just help <recipe>  # Detailed help
-just info           # Project info
-just combinations   # Show matrix options
-
-just build          # Build (debug)
-just test           # Run tests
-just quality        # Format + lint + test
-just ci             # Full CI pipeline
-
-just validate       # RSR + STATE validation
-just docs           # Generate all docs
-just cookbook       # Generate justfile docs
-
-just guix-shell     # Guix dev environment
-just container-build # Build container
+# Or use justfile
+just build
+just tui
 ----
 
 == Directory Structure
 
 [source]
 ----
-project/
-├── .editorconfig          # Editor settings
-├── .gitignore             # Git ignore
-├── .guix-channel          # Guix channel
-├── .well-known/           # RFC metadata
-│   ├── ai.txt
-│   ├── humans.txt
-│   └── security.txt
-├── config/                # Nickel configs (optional)
-├── docs/                  # Documentation
-│   ├── generated/
-│   ├── man/
-│   └── just-cookbook.adoc
-├── guix.scm               # Guix package
-├── justfile               # Task runner
-├── LICENSE.txt            # Dual license
-├── README.adoc            # Overview
-├── RSR_COMPLIANCE.adoc    # Compliance
-├── src/                   # Source code
-├── STATE.scm              # State checkpoint
-└── tests/                 # Tests
+wp-resurrect/
+├── config/                    # Nickel configurations
+│   ├── schema/                # Type definitions
+│   │   ├── site.ncl           # Main site schema
+│   │   ├── webserver.ncl      # nginx/Apache/LiteSpeed
+│   │   ├── php.ncl            # PHP-FPM settings
+│   │   ├── wordpress.ncl      # WordPress config
+│   │   ├── database.ncl       # MariaDB/MySQL
+│   │   ├── cache.ncl          # Redis/Varnish
+│   │   ├── security.ncl       # WAF, headers, fail2ban
+│   │   └── dns.ncl            # DNS records, DNSSEC
+│   ├── sites/                 # Per-site configs
+│   ├── groups/                # Site groups
+│   └── includes/              # Shared snippets
+│
+├── salt/                      # SaltStack (Python, per RSR)
+│   ├── states/socp/           # State files
+│   │   ├── dns/               # PowerDNS management
+│   │   ├── webserver/         # nginx/Apache/LS states
+│   │   ├── php/               # PHP-FPM states
+│   │   ├── wordpress/         # WP hardening
+│   │   ├── database/          # MariaDB states
+│   │   ├── cache/             # Redis/Varnish states
+│   │   └── security/          # ModSec/fail2ban
+│   └── pillar/                # Encrypted secrets
+│
+├── src/
+│   ├── socp-tui/              # Rust TUI (ratatui)
+│   ├── socp-api/              # Gleam API service
+│   └── socp-compile/          # Config compiler
+│
+├── state/                     # Guile state management
+│   ├── STATE.scm              # Current state checkpoint
+│   ├── ECOSYSTEM.scm          # Site relationships
+│   └── lib/                   # State utilities
+│
+├── sdp/                       # Software-Defined Perimeter
+│   ├── ziti/                  # OpenZiti configs
+│   └── ipv6-firewall.nft      # nftables rules
+│
+├── docs/
+│   └── ARCHITECTURE.adoc      # Detailed design
+│
+└── guix.scm                   # Package definition
 ----
 
-== RSR Compliance
+== Language Stack
 
-=== Language Tiers
+Per link:.claude/CLAUDE.md[RSR Language Policy]:
 
-* **Tier 1** (Gold): Rust, Elixir, Zig, Ada, Haskell, ReScript
-* **Tier 2** (Silver): Nickel, Racket, Guile Scheme, Nix
-* **Infrastructure**: Guix channels, derivations
+[cols="1,2,2"]
+|===
+|Component |Language |Rationale
 
-=== Required Files
+|TUI Dashboard
+|Rust (ratatui)
+|Performance, safety, no Python
 
-* `.editorconfig`
-* `.gitignore`
-* `justfile`
-* `README.adoc`
-* `RSR_COMPLIANCE.adoc`
-* `LICENSE.txt` (AGPL + Palimpsest)
-* `.well-known/security.txt`
-* `.well-known/ai.txt`
-* `.well-known/humans.txt`
-* `guix.scm` OR `flake.nix`
+|API Service
+|Gleam
+|BEAM fault tolerance, compiles to JS
 
-=== Prohibited
+|Configuration
+|Nickel
+|Type-safe config language
 
-* Python outside `salt/` directory
-* TypeScript/JavaScript (use ReScript)
-* CUE (use Guile/Nickel)
-* `Dockerfile` (use `Containerfile`)
+|State Files
+|Guile Scheme
+|RSR standard for state
 
-== STATE.scm
+|Infrastructure
+|SaltStack (Python)
+|Python allowed for Salt only
 
-The STATE.scm file tracks project state:
+|Package Manager
+|Guix
+|Primary, with Nix fallback
+|===
 
-[source,scheme]
+== Configuration Example
+
+[source,nickel]
 ----
-(define state
-  `((metadata
-     (project . "my-project")
-     (updated . "2025-12-10"))
-    (position
-     (phase . implementation)  ; design|implementation|testing|maintenance|archived
-     (maturity . beta))        ; experimental|alpha|beta|production|lts
-    (ecosystem
-     (part-of . ("RSR Framework"))
-     (depends-on . ()))))
+# config/sites/mysite.ncl
+{
+  id = "mysite-prod",
+  domain = "mysite.com",
+  environment = 'production,
+
+  webserver = {
+    type = 'nginx,
+    ssl = { provider = 'letsencrypt, hsts = true },
+  },
+
+  php = {
+    version = "8.3",
+    opcache = { enable = true, jit = true },
+  },
+
+  wordpress = {
+    auto_update_core = 'minor,
+    security = { disallow_file_edit = true, block_xmlrpc = true },
+  },
+
+  security = {
+    waf = 'modsecurity,
+    owasp_crs = { enabled = true, paranoia_level = 1 },
+    rate_limit = { requests_per_second = 50 },
+  },
+
+  dns = {
+    hidden_primary = { enabled = true },
+    dnssec = { enabled = true },
+  },
+}
 ----
 
-== Badge Schema
+== Deployment Flow
 
-Generate badges from STATE.scm:
-
-[source,bash]
+[source]
 ----
-just badges standard
+1. Edit Nickel config
+       │
+       ▼
+2. just validate-config  (Type check)
+       │
+       ▼
+3. just diff-config      (Preview changes)
+       │
+       ▼
+4. just apply-config     (Deploy via Salt)
+       │
+       ▼
+5. STATE.scm updated     (Audit trail)
+       │
+       ▼
+6. socp-tui shows status (Real-time)
 ----
 
-See `docs/BADGE_SCHEMA.adoc` for the full badge taxonomy.
+== Security Model
 
-== Ecosystem Integration
-
-This template is part of:
-
-* **STATE.scm Ecosystem**: Conversation checkpoints
-* **RSR Framework**: Repository standards
-* **Consent-Aware-HTTP**: .well-known compliance
+* **Zero Trust**: OpenZiti SDP, no direct network access
+* **IPv6-Only**: Control plane binds only to IPv6
+* **mTLS**: Client certificates required
+* **Encrypted Secrets**: Salt pillars with GPG
+* **Audit Trail**: All changes in STATE.scm
+* **OWASP CRS**: ModSecurity on all sites
+* **Fail2ban/CrowdSec**: Brute force protection
 
 == License
 
-SPDX-License-Identifier: `AGPL-3.0-or-later OR LicenseRef-Palimpsest-0.5`
+SPDX-License-Identifier: `AGPL-3.0-or-later`
 
 == Links
 
-* https://github.com/hyperpolymath/elegant-STATE[elegant-STATE] - STATE.scm tooling
-* https://github.com/hyperpolymath/conative-gating[conative-gating] - Policy enforcement
-* https://rhodium.sh[Rhodium Standard] - RSR documentation
+* link:docs/ARCHITECTURE.adoc[Architecture Documentation]
+* link:SECURITY.md[Security Policy]
+* link:CONTRIBUTING.md[Contributing Guide]
