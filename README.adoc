@@ -1,14 +1,14 @@
-// SPDX-License-Identifier: PMPL-1.0
+// SPDX-License-Identifier: PMPL-1.0-or-later
 = WP-Resurrect: Site Operations Control Plane (SOCP)
 
-image:https://img.shields.io/badge/license-Palimpsest--MPL--1.0-purple.svg[Palimpsest-MPL-1.0,link="https://github.com/hyperpolymath/palimpsest-license"] image:https://img.shields.io/badge/philosophy-Palimpsest-purple.svg[Palimpsest,link="https://github.com/hyperpolymath/palimpsest-licence"]
+image:https://img.shields.io/badge/License-PMPL--1.0-blue.svg[License: PMPL-1.0,link="https://github.com/hyperpolymath/palimpsest-license"]
 :toc:
 :sectnums:
 :icons: font
 
 image:https://img.shields.io/badge/RSR-Infrastructure-cd7f32[RSR Infrastructure]
 image:https://img.shields.io/badge/Phase-Development-yellow[Phase]
-image:https://img.shields.io/badge/License-AGPL--3.0-blue[License]
+image:https://img.shields.io/badge/License-PMPL--1.0-blue.svg[License: PMPL-1.0,link="https://github.com/hyperpolymath/palimpsest-license"]
 image:https://img.shields.io/badge/Guix-Primary-purple?logo=gnu[Guix]
 
 == Overview
@@ -256,7 +256,7 @@ Per link:.claude/CLAUDE.md[RSR Language Policy]:
 
 == License
 
-SPDX-License-Identifier: `PMPL-1.0-or-later`
+SPDX-License-Identifier: PMPL-1.0-or-later-or-later
 
 == Links
 
